@@ -1,0 +1,14 @@
+# 1. System Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+#2. IDE Settings (personal vs code settings)
+.vscode/
+.idea/
+
+# 3. Logs
+error_log
+*.Logs
+
+# 4. Environment / Secrets (Ideally)
