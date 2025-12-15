@@ -47,6 +47,43 @@ if (isset($_POST["add_to_cart"])){
     
 }
 
+// PART 1.5: Handle Quantity Updates (+ or -)
+if (isset($_GET['action']) && $_GET['action'] == 'update' && isset($_GET['id']) && isset($_GET['change'])){
+    $id = intval($_GET['id']);
+    $change = intval($_GET['change']);
+
+    if (isset($_SESSION['cart'][$id])){
+        $current_qty = $_SESSION['cart'][$id];
+        $new_qty = $current_qty + $change;
+
+        if ($change > 0){
+            $stmt = $conn->prepare("SELECT stock_quantity FROM laptops WHERE id = ?");
+            $stmt->bind_param("i", $id);
+            $stmt->execute();
+            $stock = $stmt->get_result()->fetch_assoc();
+
+            if ($new_qty > $stock['stock_quantity']){
+                echo "<script>
+                        alert('stock limit reached! Cannot add more.');
+                        window.location.href='cart.php';
+                      </script>";
+                exit;
+            }
+        }
+
+        //  2. Update Session
+        if ($new_qty < 1) {
+            unset($_SESSION['cart'][$id]);
+        } else {
+            $_SESSION['cart'][$id] = $new_qty;
+        }
+    }
+
+    //Refresh page to show changes
+    header("Location: cart.php");
+    exit;
+}
+
 // --part 2: handle removing from cart
 if (isset($_GET['action']) && $_GET['action'] == 'remove'){
     $id_to_remove = intval($_GET['id']);
@@ -101,12 +138,22 @@ if (isset($_GET['action']) && $_GET['action'] == 'remove'){
                                 <small><?php echo htmlspecialchars($product['brand']); ?></small>
                             </td>
                             <td style="padding: 10px;"><?php echo number_format($product["price"], 2);?></td>
-                            <td style="padding: 10px;"><?php echo $qty; ?></td>
-                            <td style="padding: 10px;"><?php echo number_format($line_total, 2); ?></td>
+                            
                             <td style="padding: 10px;">
-                                <a href="cart.php?action=remove&id=<?php echo $id; ?>"
-                                style="color:red; text-decoration:none;"
-                                >Remove</a>
+                                <div style="display:flex; align-items: center; gap:5px;">
+
+                                   <a href="cart.php?action=update&id=<?php echo $id; ?>&change=-1"
+                                      style="text-decoration:none; background:#ddd; color:#333; width:25px; display:inline-flex; align-items:center; justify-content:center; border-radius:4px; font-weight:bold;">
+                                      -
+
+                                   </a>
+                                   <span style="font-weight:bold; padding:0 5px;"><?php echo $qty; ?></span>
+
+                                   <a href="cart.php?action=update&id=<?php echo $id; ?>&change=1"
+                                      style="text-decoration:none; background:#ddd; color:#333; width:25px; height:25px; display:inline-flex; align-items; justify-content:center; border-radius:4px; font-weight:bold;">
+                                      +
+                                   </a>
+                                </div>
                             </td>
 
                         </tr>
@@ -129,4 +176,16 @@ if (isset($_GET['action']) && $_GET['action'] == 'remove'){
     ?>
 </div>
 </body>
+<script>
+    function changeQTy(productId, change){
+        const inputField = document.getElementById('qty-' + productId);
+        let currentQty = parseInt(inputField.value);
+        let newQty = currentQty + change;
+
+        if (newQty < 1){
+            removeItem(productId);
+            return;
+        }
+    }
+</script>
 </html>
