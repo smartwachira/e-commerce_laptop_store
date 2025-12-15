@@ -1,6 +1,12 @@
 <?php
 // header.php
 session_start(); 
+
+//Security: Generate CSRF Token if it doesn't exist
+if(empty($_SESSION['csrf_token'])){
+    // bin2hex(random_bytes(32)) creates a long, unguessable string
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

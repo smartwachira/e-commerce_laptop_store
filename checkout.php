@@ -12,6 +12,12 @@ $order_success = false;
 $error_msg = "";
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST'){
+
+    //Security Check
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']){
+        die("Security Error: Invalid CSRF Token. Request blocked.");
+    }
+
     $name = trim($_POST['full_name']);
     $email = trim($_POST['email']);
 
@@ -63,6 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST'){
 
         //step C: Insert Order Items
         $stmt = $conn->prepare("INSERT INTO order_items (order_id, laptop_id, quantity, price_at_purchase) VALUES (?, ?, ?, ?)");
+
+        // Prepare the stock update statement
+        $stmt_stock = $conn->prepare("UPDATE laptops SET stock_quantity = stock_quantity - ? WHERE id = ?");
         foreach ($_SESSION['cart'] as $pid => $qty){
             //Fetch current price again
             $check_sql = $conn->query("SELECT price FROM laptops WHERE id = $pid");
@@ -72,6 +81,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST'){
             //Bind and Execute for EACH item
             $stmt->bind_param("iiid",$order_id, $pid, $qty, $price);
             $stmt->execute();
+
+            //Deduct from Inventory
+            $stmt_stock->bind_param("ii",$qty, $pid);
+            $stmt_stock->execute();
         }
         // step D: Success
         $conn->commit(); //save everything permanently
@@ -105,6 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST'){
         <?php endif; ?>
         <div style="display: flex; gap: 40px;">
             <form method="POST" style="flex: 1; background:white; padding: 20px; border-radius: 8px;">
+                <input type="hidden"  name="csrf_token" value="<?php echo $_SESSION["csrf_token"]; ?>">
                 <h3>Contact Information</h3>
 
                 <label>Full Name</label><br>
